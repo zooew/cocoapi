@@ -141,6 +141,21 @@ def encode(np.ndarray[np.uint8_t, ndim=3, mode='fortran'] mask):
     objs = _toString(Rs)
     return objs
 
+def encode_uncompressed(np.ndarray[np.uint8_t, ndim=3, mode='fortran'] mask):
+    h, w, n = mask.shape[0], mask.shape[1], mask.shape[2]
+    cdef RLEs Rs = RLEs(n)
+    rleEncode(Rs._R,<byte*>mask.data,h,w,n)
+    # Convert Rs._R to numpy array
+    objs = []
+    for i in range(n):
+        obj = []
+        for j in range(Rs._R[i].m):
+            obj.append(Rs._R[i].cnts[j])
+        objs.append(dict(size = [Rs._R[i].h, Rs._R[i].w], counts = obj))
+
+    return objs
+
+
 # decode mask from compressed list of RLE string or RLEs object
 def decode(rleObjs):
     cdef RLEs Rs = _frString(rleObjs)
@@ -148,6 +163,7 @@ def decode(rleObjs):
     masks = Masks(h, w, n)
     rleDecode(<RLE*>Rs._R, masks._mask, n);
     return np.array(masks)
+
 
 def merge(rleObjs, intersect=0):
     cdef RLEs Rs = _frString(rleObjs)
